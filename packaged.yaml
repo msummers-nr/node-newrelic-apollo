@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: And example of a simple instrumented NodeJS Lambda
+Parameters:
+  NRAccountId:
+    Type: String
+    Description: Your New Relic account ID; necessary for distributed tracing.
+    AllowedPattern: '[0-9]+'
+Resources:
+  NewRelicExample:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://newrelic-example-us-west-1-1074083/16fbd0631c583a0301d5a79cfe13307a
+      Description: A simple Lambda, with New Relic telemetry
+      FunctionName: newrelic-example-nodejs
+      Handler: newrelic-lambda-wrapper.handler
+      Runtime: nodejs14.x
+      PackageType: Zip
+      Environment:
+        Variables:
+          NEW_RELIC_LAMBDA_HANDLER: app.lambdaHandler
+          NEW_RELIC_ACCOUNT_ID:
+            Fn::Sub: ${NRAccountId}
+          NEW_RELIC_EXTENSION_LOG_LEVEL: DEBUG
+      Layers:
+      - Fn::Sub: arn:${AWS::Partition}:lambda:${AWS::Region}:451483290750:layer:NewRelicNodeJS14X:44
+      Policies:
+      - AWSSecretsManagerGetSecretValuePolicy:
+          SecretArn:
+            Fn::ImportValue: NewRelicLicenseKeySecret-NewRelic-LicenseKeySecretARN
+    Metadata:
+      SamResourceId: NewRelicExample
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Join:
+        - ''
+        - - /aws/lambda/
+          - Ref: NewRelicExample
+      RetentionInDays: 7
+    Metadata:
+      SamResourceId: Logs
